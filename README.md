@@ -51,11 +51,19 @@ It fetches manga data from the [MangaDex API](https://mangadex.org/) and display
 - **Persistence:** @AppStorage for app settings
 
 ---
-
 ## Installation
 
 1. Clone the repository:
 
 ```bash
 git clone https://github.com/PankajKrana/MangaReader.git
+cd MangaReader
+```
+2. Open the project in Xcode 15+:<br>
+open MangaReader.xcodeproj
+3. Add Kingfisher via Swift Package Manager:<br>
+.In Xcode, go to File > Add Packages... <br> 
+.Enter the package URL:
+```bash
+https://github.com/onevcat/Kingfisher
 ```
