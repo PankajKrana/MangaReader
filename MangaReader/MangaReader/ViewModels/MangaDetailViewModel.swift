@@ -1,3 +1,11 @@
+//
+//  MangaDetailViewModel.swift
+//  MangaReader
+//
+//  Created by Pankaj Kumar Rana on 08/01/26.
+//
+
+
 import Foundation
 import Combine
 
