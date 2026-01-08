@@ -8,7 +8,7 @@
 
 import Foundation
 
-// MARK: - Chapter Model
+
 struct Chapter: Identifiable, Codable {
     let id: String
     let type: String

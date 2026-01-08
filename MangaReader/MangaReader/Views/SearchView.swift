@@ -11,66 +11,165 @@ import Kingfisher
 struct SearchView: View {
     @StateObject private var viewModel = MangaViewModel()
     @State private var query: String = ""
+    @State private var searchHistory: [String] = []
+    @State private var showFilters = false
     
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
                 // Search bar
                 HStack(spacing: 12) {
-                    TextField("Search Manga...", text: $query)
-                        .padding(.horizontal)
-                        .padding(.vertical, 10)
-                        .background(Color.gray.opacity(0.1))
-                        .clipShape(Capsule())
-                        .onChange(of: query) { newValue in
-                            searchManga(query: newValue)
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        
+                        TextField("Search Manga...", text: $query)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .onSubmit {
+                                searchManga(query: query)
+                            }
+                        
+                        if !query.isEmpty {
+                            Button(action: {
+                                query = ""
+                                viewModel.mangas = []
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
                         }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color.gray.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     
                     Button(action: {
-                        searchManga(query: query)
+                        showFilters.toggle()
                     }) {
-                        Text("Search")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .background(Color.blue)
-                            .clipShape(Capsule())
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.title3)
+                            .foregroundColor(.blue)
                     }
                 }
                 .padding()
                 
+                // Search suggestions or history
+                if query.isEmpty && !searchHistory.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            Text("Recent Searches")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button("Clear") {
+                                searchHistory.removeAll()
+                            }
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                        
+                        ForEach(searchHistory.prefix(5), id: \.self) { historyItem in
+                            Button(action: {
+                                query = historyItem
+                                searchManga(query: historyItem)
+                            }) {
+                                HStack {
+                                    Image(systemName: "clock")
+                                        .foregroundColor(.secondary)
+                                    Text(historyItem)
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                }
+                                .padding(.horizontal)
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .background(Color(UIColor.systemBackground))
+                }
+                
                 // Results
                 if viewModel.isLoading {
-                    ProgressView()
-                        .padding(.top, 40)
+                    Spacer()
+                    ProgressView("Searching...")
+                    Spacer()
                 } else if viewModel.mangas.isEmpty && !query.isEmpty {
-                    Text("No results found for \"\(query)\"")
-                        .foregroundColor(.secondary)
-                        .padding(.top, 40)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                } else {
+                    Spacer()
+                    VStack(spacing: 16) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        
+                        Text("No results found")
+                            .font(.title3)
+                            .fontWeight(.medium)
+                        
+                        Text("Try searching with different keywords")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    Spacer()
+                } else if !viewModel.mangas.isEmpty {
                     ScrollView {
-                        VStack(spacing: 12) {
+                        LazyVStack(spacing: 12) {
                             ForEach(viewModel.mangas) { manga in
-                                MangaRowView(manga: manga)
+                                NavigationLink(destination: MangaDetailView(manga: manga)) {
+                                    SearchResultRowView(manga: manga)
+                                }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.horizontal)
                     }
+                } else {
+                    Spacer()
+                    VStack(spacing: 16) {
+                        Image(systemName: "text.magnifyingglass")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        
+                        Text("Search for manga")
+                            .font(.title3)
+                            .fontWeight(.medium)
+                        
+                        Text("Discover thousands of manga titles")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
                 }
             }
             .navigationTitle("Search")
+            .sheet(isPresented: $showFilters) {
+                SearchFiltersView()
+            }
         }
     }
     
     private func searchManga(query: String) {
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespaces)
+        
+        guard !trimmedQuery.isEmpty else {
             viewModel.mangas = []
             return
         }
         
-        viewModel.fetchMangaSearch(query: query)
+        // Add to search history
+        if !searchHistory.contains(trimmedQuery) {
+            searchHistory.insert(trimmedQuery, at: 0)
+            if searchHistory.count > 10 {
+                searchHistory.removeLast()
+            }
+        }
+        
+        viewModel.fetchMangaSearch(query: trimmedQuery)
     }
+}
+#Preview {
+    SearchView()
 }

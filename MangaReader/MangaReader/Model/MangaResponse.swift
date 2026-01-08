@@ -8,7 +8,7 @@
 
 import Foundation
 
-// MARK: - Main Response Models
+
 struct MangaResponse: Codable {
     let result: String
     let response: String
