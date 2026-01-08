@@ -1,3 +1,11 @@
+//
+//  DownloadedMangaRowView.swift
+//  MangaReader
+//
+//  Created by Pankaj Kumar Rana on 08/01/26.
+//
+
+
 import SwiftUI
 import Kingfisher
 
