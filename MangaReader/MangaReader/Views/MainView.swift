@@ -8,37 +8,42 @@
 import SwiftUI
 
 struct MainView: View {
+    @State private var selectedTab = 0
+    
     var body: some View {
-        TabView {
-            
+        TabView(selection: $selectedTab) {
             HomeView()
                 .tabItem {
-                    Image(systemName: "house.fill")
+                    Image(systemName: selectedTab == 0 ? "house.fill" : "house")
                     Text("Home")
                 }
-            
-            DownloadsView()
-                .tabItem {
-                    Image(systemName: "square.and.arrow.down.fill")
-                    Text("Downloads")
-                }
+                .tag(0)
             
             SearchView()
                 .tabItem {
-                    Image(systemName: "magnifyingglass")
+                    Image(systemName: selectedTab == 1 ? "magnifyingglass.circle.fill" : "magnifyingglass")
                     Text("Search")
                 }
+                .tag(1)
+            
+            DownloadsView()
+                .tabItem {
+                    Image(systemName: selectedTab == 2 ? "arrow.down.circle.fill" : "arrow.down.circle")
+                    Text("Downloads")
+                }
+                .tag(2)
             
             SettingsView()
                 .tabItem {
-                    Image(systemName: "gear")
+                    Image(systemName: selectedTab == 3 ? "gear.circle.fill" : "gear")
                     Text("Settings")
                 }
+                .tag(3)
         }
+        .accentColor(.blue)
     }
 }
 
 #Preview {
     MainView()
 }
-
