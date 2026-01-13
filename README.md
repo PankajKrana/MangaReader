@@ -9,6 +9,10 @@ It fetches manga data from the [MangaDex API](https://mangadex.org/) and display
 
 ---
 
+## Demo
+[Watch MangaReader App Demo](https://player.cloudinary.com/embed/?cloud_name=dxlysletg&public_id=MangaApp_pgo9c8)
+
+
 ## Features
 
 - **Home Screen**
