@@ -11,7 +11,7 @@ import Kingfisher
 
 struct DownloadedMangaRowView: View {
     let manga: MangaWithCover
-    @StateObject private var downloadManager = DownloadManager.shared
+    @ObservedObject private var downloadManager = DownloadManager.shared
     
     var body: some View {
         HStack(spacing: 16) {

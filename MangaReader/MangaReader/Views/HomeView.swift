@@ -6,19 +6,15 @@
 //
 
 import SwiftUI
-
-import SwiftUI
 import Kingfisher
 
 struct HomeView: View {
     @StateObject private var viewModel = MangaViewModel()
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    
-                    
                     if let seasonalManga = viewModel.mangas.first {
                         NavigationLink(destination: MangaDetailView(manga: seasonalManga)) {
                             ZStack(alignment: .bottomLeading) {
@@ -34,44 +30,42 @@ struct HomeView: View {
                                         .fill(Color.gray.opacity(0.3))
                                         .frame(height: 180)
                                 }
-                                
+
                                 LinearGradient(
                                     gradient: Gradient(colors: [.black.opacity(0.6), .clear]),
                                     startPoint: .bottom,
                                     endPoint: .top
                                 )
                                 .cornerRadius(16)
-                                
+
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Seasonal")
                                         .font(.headline)
-                                        .foregroundColor(.white)
+                                        .foregroundStyle(.white)
                                     Text(seasonalManga.displayTitle)
                                         .font(.title3)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.white)
+                                        .foregroundStyle(.white)
                                         .lineLimit(2)
                                 }
                                 .padding()
                             }
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.plain)
                     } else {
-                        // Placeholder if no manga yet
                         ZStack {
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color.gray.opacity(0.3))
                                 .frame(height: 180)
                             Text("Seasonal")
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                                 .font(.headline)
                         }
                     }
-                    
-                    // Latest updates section
+
                     Text("Latest updates")
                         .font(.headline)
-                    
+
                     if viewModel.isLoading {
                         ProgressView()
                             .padding()
@@ -81,7 +75,7 @@ struct HomeView: View {
                                 NavigationLink(destination: MangaDetailView(manga: manga)) {
                                     MangaRowView(manga: manga)
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -91,19 +85,21 @@ struct HomeView: View {
             .navigationTitle("Home")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        viewModel.fetchManga()
-                    }) {
+                    Button {
+                        Task { await viewModel.fetchManga() }
+                    } label: {
                         Image(systemName: "arrow.clockwise")
                     }
+                    .accessibilityLabel("Refresh manga list")
                 }
             }
-            .onAppear {
-                viewModel.fetchManga()
+            .task {
+                await viewModel.fetchManga()
             }
         }
     }
 }
+
 #Preview {
     HomeView()
 }

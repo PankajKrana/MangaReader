@@ -5,8 +5,6 @@
 //  Created by Pankaj Kumar Rana on 08/01/26.
 //
 
-
-
 import SwiftUI
 import Kingfisher
 
@@ -14,12 +12,12 @@ struct ChapterReaderView: View {
     let chapterId: String
     let chapterTitle: String
     let nextChapterId: String?
-    
+
     @StateObject private var viewModel = ChapterReaderViewModel()
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
-        NavigationStack {
+        Group {
             if viewModel.isLoading {
                 VStack {
                     Spacer()
@@ -31,17 +29,17 @@ struct ChapterReaderView: View {
                     Spacer()
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 50))
-                        .foregroundColor(.orange)
+                        .foregroundStyle(.orange)
                     Text("Error loading pages")
                         .font(.headline)
                         .padding(.top)
                     Text(errorMessage)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding()
                     Button("Retry") {
-                        viewModel.fetchChapterPages(chapterId: chapterId)
+                        Task { await viewModel.fetchChapterPages(chapterId: chapterId) }
                     }
                     .buttonStyle(.bordered)
                     Spacer()
@@ -52,7 +50,7 @@ struct ChapterReaderView: View {
                     Spacer()
                     Image(systemName: "book.closed")
                         .font(.system(size: 50))
-                        .foregroundColor(.gray)
+                        .foregroundStyle(.gray)
                     Text("No pages found")
                         .font(.headline)
                         .padding(.top)
@@ -74,9 +72,9 @@ struct ChapterReaderView: View {
                         }
 
                         if let nextId = nextChapterId {
-                            Button(action: {
-                                viewModel.loadChapter(nextId)
-                            }) {
+                            Button {
+                                Task { await viewModel.loadChapter(nextId) }
+                            } label: {
                                 HStack {
                                     Spacer()
                                     Text("Next Chapter")
@@ -86,7 +84,7 @@ struct ChapterReaderView: View {
                                 }
                                 .padding()
                                 .background(Color.blue.opacity(0.15))
-                                .foregroundColor(.blue)
+                                .foregroundStyle(.blue)
                                 .cornerRadius(10)
                             }
                             .padding(.top, 16)
@@ -105,9 +103,9 @@ struct ChapterReaderView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
+                Button {
                     dismiss()
-                }) {
+                } label: {
                     HStack {
                         Image(systemName: "chevron.left")
                         Text("Back")
@@ -115,9 +113,8 @@ struct ChapterReaderView: View {
                 }
             }
         }
-        .onAppear {
-            viewModel.loadChapter(chapterId)
+        .task(id: chapterId) {
+            await viewModel.loadChapter(chapterId)
         }
     }
 }
-

@@ -13,86 +13,86 @@ struct SearchView: View {
     @State private var query: String = ""
     @State private var searchHistory: [String] = []
     @State private var showFilters = false
-    
+    @State private var activeFilters = MangaSearchFilters.default
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Search bar
                 HStack(spacing: 12) {
                     HStack {
                         Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        
+                            .foregroundStyle(.secondary)
+
                         TextField("Search Manga...", text: $query)
-                            .textFieldStyle(PlainTextFieldStyle())
+                            .textFieldStyle(.plain)
                             .onSubmit {
                                 searchManga(query: query)
                             }
-                        
+
                         if !query.isEmpty {
-                            Button(action: {
+                            Button {
                                 query = ""
                                 viewModel.mangas = []
-                            }) {
+                            } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
+                            .accessibilityLabel("Clear search")
                         }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(Color.gray.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                    Button(action: {
+
+                    Button {
                         showFilters.toggle()
-                    }) {
+                    } label: {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                             .font(.title3)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                     }
+                    .accessibilityLabel("Open search filters")
                 }
                 .padding()
-                
-                // Search suggestions or history
+
                 if query.isEmpty && !searchHistory.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
                         HStack {
                             Text("Recent Searches")
                                 .font(.headline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                             Spacer()
                             Button("Clear") {
                                 searchHistory.removeAll()
                             }
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundStyle(.blue)
                         }
                         .padding(.horizontal)
                         .padding(.bottom, 8)
-                        
+
                         ForEach(searchHistory.prefix(5), id: \.self) { historyItem in
-                            Button(action: {
+                            Button {
                                 query = historyItem
                                 searchManga(query: historyItem)
-                            }) {
+                            } label: {
                                 HStack {
                                     Image(systemName: "clock")
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                     Text(historyItem)
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Spacer()
                                 }
                                 .padding(.horizontal)
                                 .padding(.vertical, 8)
                             }
-                            .buttonStyle(PlainButtonStyle())
+                            .buttonStyle(.plain)
                         }
                     }
                     .background(Color(UIColor.systemBackground))
                 }
-                
-                // Results
+
                 if viewModel.isLoading {
                     Spacer()
                     ProgressView("Searching...")
@@ -102,15 +102,15 @@ struct SearchView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        
+                            .foregroundStyle(.gray)
+
                         Text("No results found")
                             .font(.title3)
                             .fontWeight(.medium)
-                        
+
                         Text("Try searching with different keywords")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
                     Spacer()
@@ -121,7 +121,7 @@ struct SearchView: View {
                                 NavigationLink(destination: MangaDetailView(manga: manga)) {
                                     SearchResultRowView(manga: manga)
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .buttonStyle(.plain)
                             }
                         }
                         .padding(.horizontal)
@@ -131,45 +131,52 @@ struct SearchView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "text.magnifyingglass")
                             .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        
+                            .foregroundStyle(.gray)
+
                         Text("Search for manga")
                             .font(.title3)
                             .fontWeight(.medium)
-                        
+
                         Text("Discover thousands of manga titles")
                             .font(.body)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
             }
             .navigationTitle("Search")
             .sheet(isPresented: $showFilters) {
-                SearchFiltersView()
+                SearchFiltersView(initialFilters: activeFilters) { filters in
+                    activeFilters = filters
+                    if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        searchManga(query: query)
+                    }
+                }
             }
         }
     }
-    
+
     private func searchManga(query: String) {
-        let trimmedQuery = query.trimmingCharacters(in: .whitespaces)
-        
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+
         guard !trimmedQuery.isEmpty else {
             viewModel.mangas = []
             return
         }
-        
-        // Add to search history
+
         if !searchHistory.contains(trimmedQuery) {
             searchHistory.insert(trimmedQuery, at: 0)
             if searchHistory.count > 10 {
                 searchHistory.removeLast()
             }
         }
-        
-        viewModel.fetchMangaSearch(query: trimmedQuery)
+
+        Task {
+            await viewModel.fetchMangaSearch(query: trimmedQuery, filters: activeFilters)
+        }
     }
 }
+
 #Preview {
     SearchView()
 }
