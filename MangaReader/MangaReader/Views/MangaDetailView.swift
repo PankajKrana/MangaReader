@@ -5,21 +5,17 @@
 //  Created by Pankaj Kumar Rana on 08/01/26.
 //
 
-
-
 import SwiftUI
 import Kingfisher
 
 struct MangaDetailView: View {
     let manga: MangaWithCover
     @StateObject private var viewModel = MangaDetailViewModel()
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // Manga Cover and Info
                 HStack(alignment: .top, spacing: 16) {
-                    // Cover Image
                     if let url = manga.coverImageURL {
                         KFImage(url)
                             .resizable()
@@ -32,23 +28,21 @@ struct MangaDetailView: View {
                             .fill(Color.gray.opacity(0.3))
                             .frame(width: 120, height: 180)
                     }
-                    
-                    // Manga Info
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text(manga.displayTitle)
                             .font(.title2)
                             .fontWeight(.bold)
                             .multilineTextAlignment(.leading)
-                        
+
                         if !manga.displayDescription.isEmpty {
                             Text(manga.displayDescription)
                                 .font(.body)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .lineLimit(6)
                                 .multilineTextAlignment(.leading)
                         }
-                        
-                        // Tags
+
                         if !manga.manga.attributes.tags.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
@@ -58,7 +52,7 @@ struct MangaDetailView: View {
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 4)
                                             .background(Color.blue.opacity(0.1))
-                                            .foregroundColor(.blue)
+                                            .foregroundStyle(.blue)
                                             .cornerRadius(8)
                                     }
                                 }
@@ -66,28 +60,27 @@ struct MangaDetailView: View {
                             }
                         }
                     }
-                    
+
                     Spacer()
                 }
                 .padding(.horizontal)
-                
+
                 Divider()
-                
-                // Chapters Section
+
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Chapters")
                             .font(.title3)
                             .fontWeight(.semibold)
-                        
+
                         Spacer()
-                        
+
                         Text("\(viewModel.chapters.count) chapters")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.horizontal)
-                    
+
                     if viewModel.isLoading {
                         HStack {
                             Spacer()
@@ -100,10 +93,10 @@ struct MangaDetailView: View {
                             Spacer()
                             VStack {
                                 Image(systemName: "exclamationmark.triangle")
-                                    .foregroundColor(.orange)
+                                    .foregroundStyle(.orange)
                                 Text(errorMessage)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
                             Spacer()
@@ -114,10 +107,10 @@ struct MangaDetailView: View {
                             Spacer()
                             VStack {
                                 Image(systemName: "book.closed")
-                                    .foregroundColor(.gray)
+                                    .foregroundStyle(.gray)
                                 Text("No chapters available")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                             Spacer()
                         }
@@ -125,10 +118,10 @@ struct MangaDetailView: View {
                     } else {
                         LazyVStack(spacing: 1) {
                             ForEach(viewModel.chapters) { chapter in
-                                NavigationLink(destination: ChapterReaderView(chapterId: chapter.id, chapterTitle: chapter.displayTitle, nextChapterId: "")) {
+                                NavigationLink(destination: ChapterReaderView(chapterId: chapter.id, chapterTitle: chapter.displayTitle, nextChapterId: nil)) {
                                     ChapterRowView(chapter: chapter)
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -137,9 +130,8 @@ struct MangaDetailView: View {
         }
         .navigationTitle(manga.displayTitle)
         .navigationBarTitleDisplayMode(.large)
-        .onAppear {
-            viewModel.fetchChapters(for: manga.manga.id)
+        .task(id: manga.manga.id) {
+            await viewModel.fetchChapters(for: manga.manga.id)
         }
     }
 }
-
