@@ -19,12 +19,9 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if !history.isEmpty {
-                        ContinueReadingSection(entries: Array(history.prefix(10)))
-                    }
 
                     if let seasonalManga = viewModel.mangas.first {
-                        NavigationLink(destination: MangaDetailView(manga: seasonalManga)) {
+                        NavigationLink(value: seasonalManga) {
                             ZStack(alignment: .bottomLeading) {
                                 if let url = seasonalManga.coverImageURL {
                                     KFImage(url)
@@ -71,6 +68,10 @@ struct HomeView: View {
                         }
                     }
 
+                    if !history.isEmpty {
+                        ContinueReadingSection(entries: Array(history.prefix(10)))
+                    }
+
                     Text("Latest updates")
                         .font(.headline)
 
@@ -80,7 +81,7 @@ struct HomeView: View {
                     } else {
                         VStack(spacing: 12) {
                             ForEach(viewModel.mangas) { manga in
-                                NavigationLink(destination: MangaDetailView(manga: manga)) {
+                                NavigationLink(value: manga) {
                                     MangaRowView(manga: manga)
                                 }
                                 .buttonStyle(.plain)
@@ -89,6 +90,20 @@ struct HomeView: View {
                     }
                 }
                 .padding()
+            }
+            .navigationDestination(for: MangaWithCover.self) { manga in
+                MangaDetailView(manga: manga)
+            }
+            .navigationDestination(for: ReadingHistoryEntry.self) { entry in
+                ChapterReaderView(
+                    chapterId: entry.chapterId,
+                    chapterTitle: entry.chapterTitle,
+                    nextChapterId: nil,
+                    mangaId: entry.mangaId,
+                    mangaTitle: entry.mangaTitle,
+                    coverURLString: entry.coverURLString,
+                    resumePage: entry.currentPage
+                )
             }
             .navigationTitle("Home")
             .toolbar {
@@ -119,22 +134,13 @@ private struct ContinueReadingSection: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(entries) { entry in
-                        NavigationLink {
-                            ChapterReaderView(
-                                chapterId: entry.chapterId,
-                                chapterTitle: entry.chapterTitle,
-                                nextChapterId: nil,
-                                mangaId: entry.mangaId,
-                                mangaTitle: entry.mangaTitle,
-                                coverURLString: entry.coverURLString,
-                                resumePage: entry.currentPage
-                            )
-                        } label: {
+                        NavigationLink(value: entry) {
                             ContinueReadingCard(entry: entry)
                         }
                         .buttonStyle(.plain)
                     }
                 }
+                .padding(.horizontal)
             }
         }
     }

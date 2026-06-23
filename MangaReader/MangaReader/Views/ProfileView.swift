@@ -53,14 +53,6 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    VStack {
-                        Text("15")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        Text("Downloads")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                 }
                 .padding()
                 .background(Color.gray.opacity(0.1))

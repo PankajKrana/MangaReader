@@ -25,14 +25,14 @@ struct MainView: View {
                     Text("Search")
                 }
                 .tag(1)
-            
-            DownloadsView()
+
+            FavoritesView()
                 .tabItem {
-                    Image(systemName: selectedTab == 2 ? "arrow.down.circle.fill" : "arrow.down.circle")
-                    Text("Downloads")
+                    Image(systemName: selectedTab == 2 ? "heart.fill" : "heart")
+                    Text("Favorites")
                 }
                 .tag(2)
-            
+
             SettingsView()
                 .tabItem {
                     Image(systemName: selectedTab == 3 ? "gear.circle.fill" : "gear")

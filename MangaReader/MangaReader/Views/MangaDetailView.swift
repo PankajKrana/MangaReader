@@ -6,11 +6,24 @@
 //
 
 import SwiftUI
+import SwiftData
 import Kingfisher
 
 struct MangaDetailView: View {
     let manga: MangaWithCover
     @StateObject private var viewModel = MangaDetailViewModel()
+    @Environment(\.modelContext) private var modelContext
+
+    /// Favorites for this manga's id — non-empty means it's favorited.
+    @Query private var favorites: [FavoriteManga]
+
+    init(manga: MangaWithCover) {
+        self.manga = manga
+        let id = manga.manga.id
+        _favorites = Query(filter: #Predicate { $0.mangaId == id })
+    }
+
+    private var isFavorite: Bool { !favorites.isEmpty }
 
     /// Reflects the view model's selection but routes user changes through
     /// `select(language:)`, which reloads chapters and skips no-op picks.
@@ -147,14 +160,7 @@ struct MangaDetailView: View {
                     } else {
                         LazyVStack(spacing: 1) {
                             ForEach(viewModel.chapters) { chapter in
-                                NavigationLink(destination: ChapterReaderView(
-                                    chapterId: chapter.id,
-                                    chapterTitle: chapter.displayTitle,
-                                    nextChapterId: nil,
-                                    mangaId: manga.manga.id,
-                                    mangaTitle: manga.displayTitle,
-                                    coverURLString: manga.coverImageURL?.absoluteString
-                                )) {
+                                NavigationLink(value: chapter) {
                                     ChapterRowView(chapter: chapter)
                                 }
                                 .buttonStyle(.plain)
@@ -164,8 +170,29 @@ struct MangaDetailView: View {
                 }
             }
         }
+        .navigationDestination(for: Chapter.self) { chapter in
+            ChapterReaderView(
+                chapterId: chapter.id,
+                chapterTitle: chapter.displayTitle,
+                nextChapterId: nil,
+                mangaId: manga.manga.id,
+                mangaTitle: manga.displayTitle,
+                coverURLString: manga.coverImageURL?.absoluteString
+            )
+        }
         .navigationTitle(manga.displayTitle)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    FavoritesStore.toggle(in: modelContext, manga: manga)
+                } label: {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .foregroundStyle(isFavorite ? .red : .primary)
+                }
+                .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
+            }
+        }
         .task(id: manga.manga.id) {
             await viewModel.start(
                 mangaId: manga.manga.id,

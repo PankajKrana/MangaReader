@@ -2,13 +2,14 @@
 //  ReadingHistoryStore.swift
 //  MangaReader
 //
-//  Thin helper for reading/writing ReadingHistoryEntry. Keeps SwiftData write
-//  logic out of the Views without introducing a singleton or repository layer.
 //
 
 import Foundation
 import SwiftData
 
+
+//  Thin helper for reading/writing ReadingHistoryEntry. Keeps SwiftData write
+//  logic out of the Views without introducing a singleton or repository layer.
 enum ReadingHistoryStore {
     /// Inserts or updates the entry for a manga with the latest read position.
     static func record(

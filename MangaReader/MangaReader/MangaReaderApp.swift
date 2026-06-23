@@ -14,6 +14,6 @@ struct MangaReaderApp: App {
         WindowGroup {
             SplashView()
         }
-        .modelContainer(for: ReadingHistoryEntry.self)
+        .modelContainer(for: [ReadingHistoryEntry.self, FavoriteManga.self])
     }
 }

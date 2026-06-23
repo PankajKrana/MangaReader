@@ -43,6 +43,12 @@ struct Chapter: Identifiable, Codable {
     }
 }
 
+// Hashable by id so chapters can drive value-based navigation.
+extension Chapter: Hashable {
+    static func == (lhs: Chapter, rhs: Chapter) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
 // MARK: - Chapter Response Model
 struct ChapterResponse: Codable {
     let result: String

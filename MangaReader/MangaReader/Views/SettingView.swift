@@ -9,9 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("isDarkMode") private var isDarkMode = false
-    @AppStorage("wifiOnly") private var wifiOnly = true
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("autoDownload") private var autoDownload = false
     @AppStorage("readingDirection") private var readingDirection = "leftToRight"
     @State private var showLogoutAlert = false
     @State private var showClearCacheAlert = false
@@ -78,20 +76,6 @@ struct SettingsView: View {
                         Text("Vertical").tag("vertical")
                     }
                     .pickerStyle(MenuPickerStyle())
-                    
-                    Toggle(isOn: $autoDownload) {
-                        HStack {
-                            Image(systemName: "arrow.down.circle.fill")
-                                .foregroundColor(.orange)
-                                .font(.title3)
-                            VStack(alignment: .leading) {
-                                Text("Auto Download")
-                                Text("Download new chapters automatically")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
                 }
                 
                 // MARK: - App Preferences
@@ -102,20 +86,6 @@ struct SettingsView: View {
                                 .foregroundColor(.purple)
                                 .font(.title3)
                             Text("Dark Mode")
-                        }
-                    }
-                    
-                    Toggle(isOn: $wifiOnly) {
-                        HStack {
-                            Image(systemName: "wifi")
-                                .foregroundColor(.blue)
-                                .font(.title3)
-                            VStack(alignment: .leading) {
-                                Text("Wi-Fi Only Downloads")
-                                Text("Prevent mobile data usage")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
                         }
                     }
                     
