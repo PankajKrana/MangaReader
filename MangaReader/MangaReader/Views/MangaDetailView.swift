@@ -12,6 +12,17 @@ struct MangaDetailView: View {
     let manga: MangaWithCover
     @StateObject private var viewModel = MangaDetailViewModel()
 
+    /// Reflects the view model's selection but routes user changes through
+    /// `select(language:)`, which reloads chapters and skips no-op picks.
+    private var languageBinding: Binding<String?> {
+        Binding(
+            get: { viewModel.selectedLanguage },
+            set: { newValue in
+                Task { await viewModel.select(language: newValue) }
+            }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -66,6 +77,24 @@ struct MangaDetailView: View {
                 .padding(.horizontal)
 
                 Divider()
+
+                if !viewModel.availableLanguages.isEmpty {
+                    HStack {
+                        Text("Language")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+
+                        Spacer()
+
+                        Picker("Language", selection: languageBinding) {
+                            ForEach(viewModel.availableLanguages, id: \.self) { code in
+                                Text(code.languageDisplayName).tag(String?.some(code))
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+                    .padding(.horizontal)
+                }
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -131,7 +160,11 @@ struct MangaDetailView: View {
         .navigationTitle(manga.displayTitle)
         .navigationBarTitleDisplayMode(.large)
         .task(id: manga.manga.id) {
-            await viewModel.fetchChapters(for: manga.manga.id)
+            await viewModel.start(
+                mangaId: manga.manga.id,
+                availableLanguages: manga.manga.attributes.availableTranslatedLanguages,
+                originalLanguage: manga.manga.attributes.originalLanguage
+            )
         }
     }
 }
