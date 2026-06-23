@@ -5,8 +5,8 @@
 //  Created by Pankaj Kumar Rana on 08/01/26.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 @MainActor
 final class ChapterReaderViewModel: ObservableObject {
@@ -15,36 +15,38 @@ final class ChapterReaderViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var currentPage = 0
 
-    private let baseURL = "https://api.mangadex.org"
+    private var baseImageURL = ""
+
+    private let api: APIServiceProtocol
+
+    init(api: APIServiceProtocol = APIService.shared) {
+        self.api = api
+    }
 
     func fetchChapterPages(chapterId: String) async {
         isLoading = true
         errorMessage = nil
 
-        guard let url = URL(string: "\(baseURL)/at-home/server/\(chapterId)") else {
-            errorMessage = "Invalid URL"
-            isLoading = false
-            return
-        }
-
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let chapterPages = try JSONDecoder().decode(ChapterPages.self, from: data)
+            let chapterPages = try await api.fetch(.chapterPages(chapterId: chapterId), as: ChapterPages.self)
+            baseImageURL = chapterPages.baseUrl
             pages = chapterPages.chapter.data.map { filename in
                 "\(chapterPages.baseUrl)/data/\(chapterPages.chapter.hash)/\(filename)"
             }
         } catch {
-            errorMessage = "Failed to decode pages: \(error.localizedDescription)"
+            errorMessage = error.localizedDescription
         }
 
         isLoading = false
     }
 
     func loadChapter(_ chapterId: String) async {
+        // Reset state for a new chapter
         pages = []
         errorMessage = nil
         currentPage = 0
         isLoading = false
+        baseImageURL = ""
         await fetchChapterPages(chapterId: chapterId)
     }
 }

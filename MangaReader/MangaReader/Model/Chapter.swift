@@ -48,6 +48,11 @@ struct ChapterResponse: Codable {
     let result: String
     let response: String
     let data: [Chapter]
+    // Pagination metadata returned by the /manga/{id}/feed endpoint.
+    // Optional so older/partial payloads still decode.
+    let limit: Int?
+    let offset: Int?
+    let total: Int?
 }
 
 // MARK: - Chapter Pages Model

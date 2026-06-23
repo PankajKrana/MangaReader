@@ -5,8 +5,8 @@
 //  Created by Pankaj Kumar Rana on 8/23/25.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 @MainActor
 final class MangaViewModel: ObservableObject {
@@ -14,26 +14,23 @@ final class MangaViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    private let baseURL = "https://api.mangadex.org"
+    private let api: APIServiceProtocol
+
+    init(api: APIServiceProtocol = APIService.shared) {
+        self.api = api
+    }
 
     func fetchManga() async {
         isLoading = true
         errorMessage = nil
 
-        guard let url = URL(string: "\(baseURL)/manga?limit=20&includes[]=cover_art&order[followedCount]=desc") else {
-            errorMessage = "Invalid URL"
-            isLoading = false
-            return
-        }
-
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(MangaResponse.self, from: data)
+            let response = try await api.fetch(.popularManga, as: MangaResponse.self)
             mangas = response.data.map { manga in
                 MangaWithCover(manga: manga, coverURL: extractCoverURL(from: manga))
             }
         } catch {
-            errorMessage = "Failed to load manga: \(error.localizedDescription)"
+            errorMessage = error.localizedDescription
         }
 
         isLoading = false
@@ -43,22 +40,14 @@ final class MangaViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        guard let url = URL(string: "\(baseURL)/manga?title=\(encodedQuery)&limit=30&includes[]=cover_art&order[relevance]=desc") else {
-            errorMessage = "Invalid search URL"
-            isLoading = false
-            return
-        }
-
         do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let response = try JSONDecoder().decode(MangaResponse.self, from: data)
+            let response = try await api.fetch(.searchManga(query: query), as: MangaResponse.self)
             let mapped = response.data.map { manga in
                 MangaWithCover(manga: manga, coverURL: extractCoverURL(from: manga))
             }
             mangas = applyFilters(mapped, filters: filters)
         } catch {
-            errorMessage = "Search failed: \(error.localizedDescription)"
+            errorMessage = error.localizedDescription
         }
 
         isLoading = false
