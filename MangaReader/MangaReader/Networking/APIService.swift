@@ -7,11 +7,21 @@
 import Foundation
 
 
-enum APIError: LocalizedError {
+enum APIError: LocalizedError, Equatable {
     case invalidURL
     case requestFailed(Error)
     case decodingFailed(Error)
     case noData
+
+    // HTTP status-based errors
+    case badRequest                       // 400
+    case unauthorized                     // 401
+    case forbidden                        // 403
+    case notFound                         // 404
+    case rateLimited(retryAfter: TimeInterval?)  // 429
+    case serverError                      // 500
+    case serviceUnavailable               // 503
+    case unexpectedStatus(Int)            // any other non-2xx
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +33,46 @@ enum APIError: LocalizedError {
             return "Failed to decode response: \(error.localizedDescription)"
         case .noData:
             return "No data received"
+        case .badRequest:
+            return "The request was invalid. Please try again."
+        case .unauthorized:
+            return "You are not authorized to access this content."
+        case .forbidden:
+            return "Access to this content is forbidden."
+        case .notFound:
+            return "The requested content could not be found."
+        case .rateLimited:
+            return "Too many requests. Please slow down and try again in a moment."
+        case .serverError:
+            return "The server encountered an error. Please try again later."
+        case .serviceUnavailable:
+            return "The service is temporarily unavailable. Please try again later."
+        case .unexpectedStatus(let code):
+            return "Unexpected server response (status code \(code))."
+        }
+    }
+
+    // Equatable: compare by case (associated Errors aren't Equatable, so
+    // requestFailed/decodingFailed match on case only). Useful for tests.
+    static func == (lhs: APIError, rhs: APIError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidURL, .invalidURL),
+             (.requestFailed, .requestFailed),
+             (.decodingFailed, .decodingFailed),
+             (.noData, .noData),
+             (.badRequest, .badRequest),
+             (.unauthorized, .unauthorized),
+             (.forbidden, .forbidden),
+             (.notFound, .notFound),
+             (.serverError, .serverError),
+             (.serviceUnavailable, .serviceUnavailable):
+            return true
+        case let (.rateLimited(a), .rateLimited(b)):
+            return a == b
+        case let (.unexpectedStatus(a), .unexpectedStatus(b)):
+            return a == b
+        default:
+            return false
         }
     }
 }
@@ -73,28 +123,89 @@ final class APIService: APIServiceProtocol {
     private let session: URLSession
     private let decoder: JSONDecoder
 
-    init(session: URLSession = .shared, decoder: JSONDecoder = JSONDecoder()) {
-        self.session = session
+    /// Default session with sensible timeouts so requests don't hang forever.
+    private static func defaultSession() -> URLSession {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15   // per-request
+        config.timeoutIntervalForResource = 30  // whole resource load
+        return URLSession(configuration: config)
+    }
+
+    init(session: URLSession? = nil, decoder: JSONDecoder = JSONDecoder()) {
+        self.session = session ?? APIService.defaultSession()
         self.decoder = decoder
     }
 
     /// The one centralized entry point for all data: manga, chapters, pages, etc.
+    /// Validates the HTTP status code before decoding and retries once on 429.
     func fetch<T: Decodable>(_ endpoint: Endpoint, as type: T.Type) async throws -> T {
         guard let url = endpoint.url else {
             throw APIError.invalidURL
         }
 
-        let data: Data
         do {
-            (data, _) = try await session.data(from: url)
+            let data = try await requestData(from: url)
+            return try decode(data, as: T.self)
+        } catch APIError.rateLimited(let retryAfter) {
+            // Retry exactly once for 429, honoring Retry-After when present.
+            let delay = retryAfter ?? 1
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            let data = try await requestData(from: url)
+            return try decode(data, as: T.self)
+        }
+    }
+
+    /// Performs the network request and validates the HTTP status code.
+    /// HTTP errors are mapped to `APIError` cases and never reach the decoder.
+    private func requestData(from url: URL) async throws -> Data {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(from: url)
         } catch {
             throw APIError.requestFailed(error)
         }
 
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.noData
+        }
+
+        switch http.statusCode {
+        case 200..<300:
+            return data
+        case 400:
+            throw APIError.badRequest
+        case 401:
+            throw APIError.unauthorized
+        case 403:
+            throw APIError.forbidden
+        case 404:
+            throw APIError.notFound
+        case 429:
+            throw APIError.rateLimited(retryAfter: Self.retryAfterSeconds(from: http))
+        case 500:
+            throw APIError.serverError
+        case 503:
+            throw APIError.serviceUnavailable
+        default:
+            throw APIError.unexpectedStatus(http.statusCode)
+        }
+    }
+
+    private func decode<T: Decodable>(_ data: Data, as type: T.Type) throws -> T {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
             throw APIError.decodingFailed(error)
         }
+    }
+
+    /// Parses the `Retry-After` header (delay in seconds) if present.
+    private static func retryAfterSeconds(from response: HTTPURLResponse) -> TimeInterval? {
+        guard let value = response.value(forHTTPHeaderField: "Retry-After"),
+              let seconds = TimeInterval(value.trimmingCharacters(in: .whitespaces)) else {
+            return nil
+        }
+        return seconds
     }
 }

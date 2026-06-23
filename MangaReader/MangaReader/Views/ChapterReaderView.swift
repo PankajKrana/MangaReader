@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import Kingfisher
 
 struct ChapterReaderView: View {
@@ -13,8 +14,22 @@ struct ChapterReaderView: View {
     let chapterTitle: String
     let nextChapterId: String?
 
+    // Manga context for reading-history tracking. Optional so existing
+    // call sites without manga info still compile and simply skip tracking.
+    var mangaId: String? = nil
+    var mangaTitle: String? = nil
+    var coverURLString: String? = nil
+    /// Page to resume at when the chapter opens (from saved history).
+    var resumePage: Int = 0
+
     @StateObject private var viewModel = ChapterReaderViewModel()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    /// Tracks the chapter currently displayed (it can change via "Next Chapter").
+    @State private var activeChapterId: String = ""
+    @State private var activeChapterTitle: String = ""
+    @State private var didResume = false
 
     var body: some View {
         Group {
@@ -57,7 +72,8 @@ struct ChapterReaderView: View {
                     Spacer()
                 }
             } else {
-                ScrollView(.vertical) {
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical) {
                     LazyVStack(spacing: 12) {
                         ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { index, pageURL in
                             KFImage(URL(string: pageURL))
@@ -66,6 +82,7 @@ struct ChapterReaderView: View {
                                 .frame(maxWidth: .infinity)
                                 .background(Color.black.opacity(0.02))
                                 .cornerRadius(4)
+                                .id(index)
                                 .onAppear {
                                     viewModel.currentPage = index
                                 }
@@ -73,6 +90,8 @@ struct ChapterReaderView: View {
 
                         if let nextId = nextChapterId {
                             Button {
+                                activeChapterId = nextId
+                                didResume = true
                                 Task { await viewModel.loadChapter(nextId) }
                             } label: {
                                 HStack {
@@ -93,11 +112,19 @@ struct ChapterReaderView: View {
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal)
+                    }
+                    .background(Color(UIColor.systemBackground))
+                    .onAppear {
+                        // Resume to the saved page once, after pages are loaded.
+                        if !didResume, resumePage > 0, resumePage < viewModel.pages.count {
+                            proxy.scrollTo(resumePage, anchor: .top)
+                        }
+                        didResume = true
+                    }
                 }
-                .background(Color(UIColor.systemBackground))
             }
         }
-        .navigationTitle(chapterTitle)
+        .navigationTitle(activeChapterTitle.isEmpty ? chapterTitle : activeChapterTitle)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
@@ -114,7 +141,27 @@ struct ChapterReaderView: View {
             }
         }
         .task(id: chapterId) {
+            activeChapterId = chapterId
+            activeChapterTitle = chapterTitle
             await viewModel.loadChapter(chapterId)
         }
+        .onChange(of: viewModel.currentPage) {
+            recordProgress()
+        }
+    }
+
+    /// Saves the current reading position to history (no-op without manga info).
+    private func recordProgress() {
+        guard let mangaId, let mangaTitle, !viewModel.pages.isEmpty else { return }
+        ReadingHistoryStore.record(
+            in: modelContext,
+            mangaId: mangaId,
+            mangaTitle: mangaTitle,
+            coverURLString: coverURLString,
+            chapterId: activeChapterId.isEmpty ? chapterId : activeChapterId,
+            chapterTitle: activeChapterTitle.isEmpty ? chapterTitle : activeChapterTitle,
+            currentPage: viewModel.currentPage,
+            totalPages: viewModel.pages.count
+        )
     }
 }

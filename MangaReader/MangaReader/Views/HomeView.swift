@@ -6,15 +6,23 @@
 //
 
 import SwiftUI
+import SwiftData
 import Kingfisher
 
 struct HomeView: View {
     @StateObject private var viewModel = MangaViewModel()
 
+    @Query(sort: \ReadingHistoryEntry.updatedAt, order: .reverse)
+    private var history: [ReadingHistoryEntry]
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if !history.isEmpty {
+                        ContinueReadingSection(entries: Array(history.prefix(10)))
+                    }
+
                     if let seasonalManga = viewModel.mangas.first {
                         NavigationLink(destination: MangaDetailView(manga: seasonalManga)) {
                             ZStack(alignment: .bottomLeading) {
@@ -100,6 +108,82 @@ struct HomeView: View {
     }
 }
 
+private struct ContinueReadingSection: View {
+    let entries: [ReadingHistoryEntry]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Continue Reading")
+                .font(.headline)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(entries) { entry in
+                        NavigationLink {
+                            ChapterReaderView(
+                                chapterId: entry.chapterId,
+                                chapterTitle: entry.chapterTitle,
+                                nextChapterId: nil,
+                                mangaId: entry.mangaId,
+                                mangaTitle: entry.mangaTitle,
+                                coverURLString: entry.coverURLString,
+                                resumePage: entry.currentPage
+                            )
+                        } label: {
+                            ContinueReadingCard(entry: entry)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct ContinueReadingCard: View {
+    let entry: ReadingHistoryEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ZStack(alignment: .bottom) {
+                if let url = entry.coverURL {
+                    KFImage(url)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 110, height: 160)
+                        .clipped()
+                        .cornerRadius(10)
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 110, height: 160)
+                }
+
+                if entry.totalPages > 0 {
+                    ProgressView(value: Double(entry.currentPage + 1),
+                                 total: Double(entry.totalPages))
+                        .tint(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.bottom, 4)
+                }
+            }
+
+            Text(entry.mangaTitle)
+                .font(.caption)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .frame(width: 110, alignment: .leading)
+
+            Text(entry.chapterTitle)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(width: 110, alignment: .leading)
+        }
+    }
+}
+
 #Preview {
     HomeView()
+        .modelContainer(for: ReadingHistoryEntry.self, inMemory: true)
 }

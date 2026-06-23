@@ -147,7 +147,14 @@ struct MangaDetailView: View {
                     } else {
                         LazyVStack(spacing: 1) {
                             ForEach(viewModel.chapters) { chapter in
-                                NavigationLink(destination: ChapterReaderView(chapterId: chapter.id, chapterTitle: chapter.displayTitle, nextChapterId: nil)) {
+                                NavigationLink(destination: ChapterReaderView(
+                                    chapterId: chapter.id,
+                                    chapterTitle: chapter.displayTitle,
+                                    nextChapterId: nil,
+                                    mangaId: manga.manga.id,
+                                    mangaTitle: manga.displayTitle,
+                                    coverURLString: manga.coverImageURL?.absoluteString
+                                )) {
                                     ChapterRowView(chapter: chapter)
                                 }
                                 .buttonStyle(.plain)

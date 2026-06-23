@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct MangaReaderApp: App {
@@ -13,5 +14,6 @@ struct MangaReaderApp: App {
         WindowGroup {
             SplashView()
         }
+        .modelContainer(for: ReadingHistoryEntry.self)
     }
 }
