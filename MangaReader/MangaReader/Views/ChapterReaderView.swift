@@ -169,6 +169,10 @@ struct ChapterReaderView: View {
                 LazyVStack(spacing: 12) {
                     ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { index, pageURL in
                         KFImage(URL(string: pageURL))
+                            .placeholder {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, minHeight: 300)
+                            }
                             .resizable()
                             .scaledToFit()
                             .frame(maxWidth: .infinity)
@@ -202,6 +206,7 @@ struct ChapterReaderView: View {
         TabView(selection: $pageSelection) {
             ForEach(Array(viewModel.pages.enumerated()), id: \.offset) { index, pageURL in
                 KFImage(URL(string: pageURL))
+                    .placeholder { ProgressView() }
                     .resizable()
                     .scaledToFit()
                     .tag(index)

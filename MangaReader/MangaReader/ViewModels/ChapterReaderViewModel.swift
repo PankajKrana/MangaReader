@@ -30,8 +30,11 @@ final class ChapterReaderViewModel: ObservableObject {
         do {
             let chapterPages = try await api.fetch(.chapterPages(chapterId: chapterId), as: ChapterPages.self)
             baseImageURL = chapterPages.baseUrl
-            pages = chapterPages.chapter.data.map { filename in
-                "\(chapterPages.baseUrl)/data/\(chapterPages.chapter.hash)/\(filename)"
+            // Use data-saver images: compressed JPEGs (~hundreds of KB) instead of
+            // the full-quality PNGs (often several MB each), which were slow to
+            // download and decode and left the reader showing blank pages.
+            pages = chapterPages.chapter.dataSaver.map { filename in
+                "\(chapterPages.baseUrl)/data-saver/\(chapterPages.chapter.hash)/\(filename)"
             }
         } catch {
             errorMessage = error.localizedDescription

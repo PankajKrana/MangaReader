@@ -14,9 +14,9 @@ final class MangaDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    /// Languages this manga is translated into, as provided by MangaDex.
+    
     @Published private(set) var availableLanguages: [String] = []
-    /// The language currently shown. Changing it reloads the chapter list.
+    
     @Published var selectedLanguage: String?
 
     private let api: APIServiceProtocol
@@ -41,11 +41,7 @@ final class MangaDetailViewModel: ObservableObject {
         await loadChapters()
     }
 
-    /// Picks the initial language by priority:
-    /// 1. English, if available.
-    /// 2. The manga's original language, but only if it is actually available.
-    /// 3. The first available language.
-    /// 4. `nil` when nothing is available (empty-state behavior).
+
     private func initialLanguage(available: [String], original: String) -> String? {
         if available.contains("en") {
             return "en"
@@ -55,17 +51,13 @@ final class MangaDetailViewModel: ObservableObject {
         }
         return available.first
     }
-
-    /// Called by the picker when the user chooses a language. Ignores no-op
-    /// selections so we never fire a duplicate request for the language that
-    /// is already showing.
+    
     func select(language: String?) async {
         guard language != selectedLanguage else { return }
         selectedLanguage = language
         await loadChapters()
     }
 
-    /// Reloads the chapter list for the currently selected language.
     func loadChapters() async {
         guard let mangaId = mangaId, let language = selectedLanguage else {
             chapters = []
@@ -74,48 +66,36 @@ final class MangaDetailViewModel: ObservableObject {
 
         isLoading = true
         errorMessage = nil
+        chapters = []
+
+        let pageSize = 100
+        var offset = 0
+        var seenIDs = Set<String>()
 
         do {
-            let result = try await fetchAllChapters(mangaId: mangaId, language: language)
-            chapters = sortByChapterNumber(result)
+            while true {
+                let response = try await api.fetch(
+                    .chapters(mangaId: mangaId, language: language, limit: pageSize, offset: offset),
+                    as: ChapterResponse.self
+                )
+
+                let fresh = response.data.filter { seenIDs.insert($0.id).inserted }
+                if !fresh.isEmpty {
+                    chapters = sortByChapterNumber(chapters + fresh)
+                }
+                isLoading = false  // first page is enough to start reading
+
+                // Stop when we've collected everything the server reports, or
+                // when a page comes back empty (guards against a missing `total`).
+                let total = response.total ?? chapters.count
+                offset += pageSize
+                if response.data.isEmpty || chapters.count >= total { break }
+            }
         } catch {
-            errorMessage = error.localizedDescription
+            if chapters.isEmpty { errorMessage = error.localizedDescription }
         }
 
         isLoading = false
-    }
-
-    /// Fetches every chapter for a manga in a given language by walking the
-    /// API's pagination (`total`/`offset`/`limit`) until all pages are
-    /// retrieved. Pages are requested sequentially and concatenated in order;
-    /// duplicate chapter IDs are skipped as a safety net.
-    private func fetchAllChapters(mangaId: String, language: String) async throws -> [Chapter] {
-        let pageSize = 100
-        var offset = 0
-        var collected: [Chapter] = []
-        var seenIDs = Set<String>()
-
-        while true {
-            let response = try await api.fetch(
-                .chapters(mangaId: mangaId, language: language, limit: pageSize, offset: offset),
-                as: ChapterResponse.self
-            )
-
-            for chapter in response.data where !seenIDs.contains(chapter.id) {
-                seenIDs.insert(chapter.id)
-                collected.append(chapter)
-            }
-
-            // Stop when we've collected everything the server reports, or when
-            // a page comes back empty (guards against a missing `total`).
-            let total = response.total ?? collected.count
-            offset += pageSize
-            if response.data.isEmpty || collected.count >= total {
-                break
-            }
-        }
-
-        return collected
     }
 
     private func sortByChapterNumber(_ chapters: [Chapter]) -> [Chapter] {
