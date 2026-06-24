@@ -8,10 +8,6 @@ import Foundation
 import SwiftData
 
 enum FavoritesStore {
-    static func isFavorite(in context: ModelContext, mangaId: String) -> Bool {
-        entry(in: context, mangaId: mangaId) != nil
-    }
-
     static func entry(in context: ModelContext, mangaId: String) -> FavoriteManga? {
         let descriptor = FetchDescriptor<FavoriteManga>(
             predicate: #Predicate { $0.mangaId == mangaId }

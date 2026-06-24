@@ -66,32 +66,9 @@ struct MangaAttributes: Codable {
         }
     }
     
-    var displayYear: String {
-        if let year = year {
-            return String(year)
-        }
-        return "Unknown"
-    }
-    
-    var displayContentRating: String {
-        switch contentRating {
-        case "safe": return "Safe"
-        case "suggestive": return "Suggestive"
-        case "erotica": return "Erotica"
-        case "pornographic": return "Pornographic"
-        default: return contentRating.capitalized
-        }
-    }
-    
     var genreTags: [Tag] {
         tags.filter { tag in
             tag.attributes.group == "genre"
-        }
-    }
-    
-    var themeTags: [Tag] {
-        tags.filter { tag in
-            tag.attributes.group == "theme"
         }
     }
 }
@@ -128,33 +105,6 @@ struct RelationshipAttributes: Codable {
     let createdAt: String?
     let updatedAt: String?
     let version: Int?
-}
-
-// MARK: - Cover Response Models
-struct CoverResponse: Codable {
-    let result: String
-    let response: String
-    let data: [CoverData]
-    let limit: Int?
-    let offset: Int?
-    let total: Int?
-}
-
-struct CoverData: Codable, Identifiable {
-    let id: String
-    let type: String
-    let attributes: CoverAttributes
-    let relationships: [Relationship]?
-}
-
-struct CoverAttributes: Codable {
-    let description: String?
-    let volume: String?
-    let fileName: String
-    let locale: String?
-    let createdAt: String
-    let updatedAt: String
-    let version: Int
 }
 
 // MARK: - Enhanced Manga with Cover Model

@@ -73,44 +73,6 @@ struct ReadingHistoryView: View {
     }
 }
 
-private struct ReadingHistoryRow: View {
-    let entry: ReadingHistoryEntry
-
-    var body: some View {
-        HStack(spacing: 12) {
-            if let url = entry.coverURL {
-                KFImage(url)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 44, height: 64)
-                    .clipped()
-                    .cornerRadius(6)
-            } else {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 44, height: 64)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.mangaTitle)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .lineLimit(1)
-                Text(entry.chapterTitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Text("Page \(entry.currentPage + 1) of \(entry.totalPages)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, 4)
-    }
-}
-
 private struct ReadingHistoryCard: View {
     let entry: ReadingHistoryEntry
 
